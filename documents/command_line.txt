@@ -1,0 +1,21 @@
+Task 1: 
+composer create/project laravel/laravel MigrationAssignment
+
+Task 2: 
+php artisan make:migration create_products_table --create=products
+
+Task 3: 
+php artisan migrate
+
+Task 4: 
+php artisan migrate:rollback
+php artisan migrate
+
+Task 5: 
+php artisan make:migration add_category_to_products
+
+Task 6: 
+php artisan migrate
+
+Task 7: 
+php artisan make:migration create_orders_table --create=orders
