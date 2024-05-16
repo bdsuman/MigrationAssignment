@@ -22,7 +22,7 @@ class CalculationController extends Controller
         $cabinetInteriorMaterialPrice = $request->input('cabinet_interior_material_data.value');   
         $cabinateSize=$this->cmToInches($request);
         $extractedItems = $this->extractAttachItem($cabinetAttachItem);
-        $cabinateInSquarInch = (2*($cabinateSize['h']+$cabinateSize['d']))+($cabinateSize['h']+$cabinateSize['w'])+ (2*($cabinateSize['w']+$cabinateSize['d']));
+        $cabinateInSquarInch = (2*($cabinateSize['h']*$cabinateSize['d']))+($cabinateSize['h']*$cabinateSize['w'])+ (2*($cabinateSize['w']*$cabinateSize['d']));
         
         $singleShelveSquar= round($cabinateSize['w']*$cabinateSize['d']);
        
@@ -38,10 +38,10 @@ class CalculationController extends Controller
             'shelv'=>[
                     'singleShelvsSquarInch'=>$singleShelveSquar,
                     'singleShelvsPrice'=>round($singleShelveSquar*$cabinetInteriorMaterialPrice),
-                    'totalShelvs'=>$extractedItems['Shelves'],
+                    'totalShelvs'=>$extractedItems['Shelves']??0,
                 ],          
-            'door'=>$this->doorCalc($cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Door']),
-            'drawer'=>$this->drawerCalc($cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Drawer']),
+            'door'=>$this->doorCalc($cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Door']??0),
+            'drawer'=>$this->drawerCalc($cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Drawer']??0),
 
         ]);
     }
@@ -49,24 +49,24 @@ class CalculationController extends Controller
     private function cmToInches(Request $request)
     {
 
-        $dimensionUnit = (int) $request->input('dimension_unit_data',0);
-        $dimensionWidth = (int) $request->input('dimension_width_data',0);
-        $dimensionWidthFrac = (int) $request->input('dimension_width_data_frac',0);
-        $dimensionHeight = (int) $request->input('dimension_height_data',0);
-        $dimensionHeightFrac = (int) $request->input('dimension_height_data_frac',0);
-        $dimensionDept = (int) $request->input('dimension_dept_data',0);
-        $dimensionDeptFrac = (int) $request->input('dimension_dept_data_frac',0);
+        $dimensionUnit =  $this->numberCheck($request->input('dimension_unit_data'));
+        $dimensionWidth = $this->numberCheck($request->input('dimension_width_data'));
+        $dimensionWidthFrac =  $this->numberCheck($request->input('dimension_width_data_frac'),true);
+        $dimensionHeight = $this->numberCheck($request->input('dimension_height_data'));
+        $dimensionHeightFrac =  $this->numberCheck($request->input('dimension_height_data_frac'),true);
+        $dimensionDept =  $this->numberCheck($request->input('dimension_dept_data'));
+        $dimensionDeptFrac =  $this->numberCheck($request->input('dimension_dept_data_frac'),true);
         
         if ($dimensionUnit === 'centimeter') {
-            $dimensionWidthInInches = ($dimensionWidth+(1/$dimensionWidthFrac)) * 0.393701;
-            $dimensionHeightInInches = ($dimensionHeight+(1/$dimensionHeightFrac)) * 0.393701;
-            $dimensionDeptInInches = ($dimensionDept+(1/$dimensionDeptFrac)) * 0.393701;
+            $dimensionWidthInInches = ($dimensionWidth+$dimensionWidthFrac) * 0.393701;
+            $dimensionHeightInInches = ($dimensionHeight+$dimensionHeightFrac) * 0.393701;
+            $dimensionDeptInInches = ($dimensionDept+$dimensionDeptFrac) * 0.393701;
             
           
         } else {
-            $dimensionWidthInInches = ($dimensionWidth+(1/$dimensionWidthFrac));
-            $dimensionHeightInInches = ($dimensionHeight+(1/$dimensionHeightFrac));
-            $dimensionDeptInInches = ($dimensionDept+(1/$dimensionDeptFrac));
+            $dimensionWidthInInches = ($dimensionWidth+$dimensionWidthFrac);
+            $dimensionHeightInInches = ($dimensionHeight+$dimensionHeightFrac);
+            $dimensionDeptInInches = ($dimensionDept+$dimensionDeptFrac);
         }
 
           // Returning converted dimensions
@@ -99,8 +99,8 @@ class CalculationController extends Controller
 
     private function doorCalc($size,$price,$count):array{
               return [
-                        'singleDoorSquarInch'=>$size['w']*$size['d']*$size['h'],
-                        'singleDoorPrice'=>round($size['w']*$size['d']*$size['h']*$price),
+                        'singleDoorSquarInch'=>$size['w']*$size['h'],
+                        'singleDoorPrice'=>round(($size['w']*$size['h'])*$price),
                         'totalDoor'=> $count
                     ];
     }
@@ -110,5 +110,14 @@ class CalculationController extends Controller
                         'singleDoorPrice'=>round($size['w']*$size['d']*$size['h']*$price),
                         'totalDoor'=> $count
                     ];
+    }
+
+    private function numberCheck($number,$isFraction=false){
+        $number = intval($number);
+        if($isFraction){
+            return $number<=0?0:$number/10;         
+        }else{
+             return $number<=0?0:$number; 
+        }
     }
 }
