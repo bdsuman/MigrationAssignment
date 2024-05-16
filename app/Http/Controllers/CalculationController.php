@@ -25,7 +25,8 @@ class CalculationController extends Controller
         $cabinateInSquarInch = (2*($cabinateSize['h']*$cabinateSize['d']))+($cabinateSize['h']*$cabinateSize['w'])+ (2*($cabinateSize['w']*$cabinateSize['d']));
         
         $singleShelveSquar= round($cabinateSize['w']*$cabinateSize['d']);
-       
+        $drawarCalc=$this->drawerCalc($cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Drawer']??0);
+        $doorCalc= $this->doorCalc($drawarCalc['totalDrawerHeight'],$cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Door']??0);
         return response()->json([
             'cabinet_box_construction' => $cabinetBoxConstruction,
             'cabinet_attach_item' =>$extractedItems,
@@ -40,8 +41,9 @@ class CalculationController extends Controller
                     'singleShelvsPrice'=>round($singleShelveSquar*$cabinetInteriorMaterialPrice),
                     'totalShelvs'=>$extractedItems['Shelves']??0,
                 ],          
-            'door'=>$this->doorCalc($cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Door']??0),
-            'drawer'=>$this->drawerCalc($cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Drawer']??0),
+            'door'=>$doorCalc,
+            'drawer'=>$drawarCalc,
+            'totalPrice'=>round($cabinateInSquarInch*$cabinetInteriorMaterialPrice)+(round($singleShelveSquar*$cabinetInteriorMaterialPrice)*($extractedItems['Shelves']??0))+($doorCalc['singleDoorPrice']*$doorCalc['totalDoor'])+($drawarCalc['singleDrawerPrice']*$drawarCalc['totalDrawer'])+round($cabinateInSquarInch*$this->manufaturingCost,2)
 
         ]);
     }
@@ -97,18 +99,22 @@ class CalculationController extends Controller
         return $extracted;
     }
 
-    private function doorCalc($size,$price,$count):array{
+    private function doorCalc($drawar_height,$size,$price,$count):array{
               return [
-                        'singleDoorSquarInch'=>$size['w']*$size['h'],
-                        'singleDoorPrice'=>round(($size['w']*$size['h'])*$price),
+                        'singleDoorSquarInch'=>$size['w']*($size['h']-$drawar_height),
+                        'singleDoorPrice'=>round(($size['w']*($size['h']-$drawar_height))*$price),
                         'totalDoor'=> $count
                     ];
     }
     private function drawerCalc($size,$price,$count):array{
+
+            $singleDrawarHeight = $size['h']/4;
+
               return [
-                        'singleDoorSquarInch'=>$size['w']*$size['d']*$size['h'],
-                        'singleDoorPrice'=>round($size['w']*$size['d']*$size['h']*$price),
-                        'totalDoor'=> $count
+                        'singleDrawerSquarInch'=>$size['w']*$singleDrawarHeight,
+                        'singleDrawerPrice'=>round($size['w']*$singleDrawarHeight*$price),
+                        'totalDrawer'=> $count,
+                        'totalDrawerHeight'=>$singleDrawarHeight*$count
                     ];
     }
 
