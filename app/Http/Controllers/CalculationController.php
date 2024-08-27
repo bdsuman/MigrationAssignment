@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 class CalculationController extends Controller
 { 
 
-    public $manufaturingCost;
+   public $manufaturingCost;
 
     public function __construct() {
         $this->manufaturingCost =  0.01;
@@ -95,20 +95,43 @@ class CalculationController extends Controller
     {
 
         $dimensionUnit =  $this->numberCheck($request->input('dimension_unit_data'));
-        $dimensionWidth = $this->numberCheck($request->input('dimension_width_data'));
-        $dimensionWidthFrac =  $this->numberCheck($request->input('dimension_width_data_frac'),true);
-        $dimensionHeight = $this->numberCheck($request->input('dimension_height_data'));
-        $dimensionHeightFrac =  $this->numberCheck($request->input('dimension_height_data_frac'),true);
-        $dimensionDept =  $this->numberCheck($request->input('dimension_dept_data'));
-        $dimensionDeptFrac =  $this->numberCheck($request->input('dimension_dept_data_frac'),true);
-        
+
         if ($dimensionUnit === 'centimeter') {
+            /**
+            *"cm_width": "36",
+            *"cm_height": "36",
+            *"cm_dept": "37",
+            *"cm_width_fraction": "0.4",
+            *"cm_height_fraction": "0.9",
+            *"cm_dept_fraction": "0.9"
+             */
+            $dimensionWidthFrac =  $this->numberCheck($request->input('cm_width_fraction',0));
+            $dimensionWidth = $this->numberCheck($request->input('cm_width',35));
+            $dimensionHeightFrac =  $this->numberCheck($request->input('cm_height_fraction',0));
+            $dimensionHeight = $this->numberCheck($request->input('cm_height',35));
+            $dimensionDeptFrac =  $this->numberCheck($request->input('cm_dept_fraction',0));
+            $dimensionDept =  $this->numberCheck($request->input('cm_dept',35));
+
             $dimensionWidthInInches = ($dimensionWidth+$dimensionWidthFrac) * 0.393701;
             $dimensionHeightInInches = ($dimensionHeight+$dimensionHeightFrac) * 0.393701;
             $dimensionDeptInInches = ($dimensionDept+$dimensionDeptFrac) * 0.393701;
             
-          
         } else {
+            /**
+             *"inch_width": "36",
+             *"inch_height": "39",
+             *"inch_dept": "38",
+             *"inch_width_fraction": "1/8",
+            *"inch_height_fraction": "1/2",
+            *"inch_dept_fraction": "3/8"
+             */
+            $dimensionWidth = $this->numberCheck($request->input('inch_width',35));
+            $dimensionWidthFrac =  $this->numberCheck($request->input('inch_width_fraction',0),true);
+            $dimensionHeight = $this->numberCheck($request->input('inch_height',35));
+            $dimensionHeightFrac =  $this->numberCheck($request->input('inch_height_fraction',0),true);
+            $dimensionDept =  $this->numberCheck($request->input('inch_dept',35));
+            $dimensionDeptFrac =  $this->numberCheck($request->input('inch_dept_fraction',0),true);
+
             $dimensionWidthInInches = ($dimensionWidth+$dimensionWidthFrac);
             $dimensionHeightInInches = ($dimensionHeight+$dimensionHeightFrac);
             $dimensionDeptInInches = ($dimensionDept+$dimensionDeptFrac);
@@ -161,9 +184,9 @@ class CalculationController extends Controller
     }
 
     private function numberCheck($number,$isFraction=false){
-        $number = intval($number);
+    
         if($isFraction){
-            return $number<=0?0:$number/10;         
+            return $number<=0?0:$this->parseFractionValue($number);         
         }else{
              return $number<=0?0:$number; 
         }
@@ -172,4 +195,47 @@ class CalculationController extends Controller
     private function containsWord($str, $word) {
         return strpos($str, $word) !== false;
     }
+
+    private function parseFractionValue($fraction) {
+
+        if($fraction==0){
+            return 0;
+        }
+        
+        list($numerator, $denominator) = explode('/', $fraction);
+        return (int)$numerator/(int)$denominator;
+    }
+
+   
+
+
+  public function vanities(Request $request){
+         // Extracting data from the request
+         $cabinetBoxConstruction = $request->input('data_product_specification.value');
+         $cabinetAttachItem = $request->input('cabinate_type_data.data_product_specification');
+         $cabinetDoorStyle = $request->input('cabinate_door_style_data.value');
+         $cabinetInteriorMaterialPrice = $request->input('cabinet_interior_material_data.value');   
+         $cabinateSize=$this->cmToInches($request);
+         $extractedItems = $this->extractAttachItem($cabinetAttachItem);
+         $cabinateInSquarInch = (2*($cabinateSize['h']*$cabinateSize['d']))+($cabinateSize['h']*$cabinateSize['w'])+ (2*($cabinateSize['w']*$cabinateSize['d']));
+         $quantity = $request->quantity;
+ 
+         $singleShelveSquar= round($cabinateSize['w']*$cabinateSize['d']);
+         $drawarCalc=$this->drawerCalc($cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Drawer']??0);
+         return response()->json([
+             'cabinet_box_construction' => $cabinetBoxConstruction,
+             'cabinet_attach_item' =>$extractedItems,
+             'cabinet_door_style' => $cabinetDoorStyle,
+             'cmToInche'=>$cabinateSize,
+             'cabinateInSquareInch'=>$cabinateInSquarInch,
+             'manufacturingCostDoller'=>round($cabinateInSquarInch*$this->manufaturingCost,2),
+             'cabinateBoxPriceDollar'=>round($cabinateInSquarInch*$cabinetInteriorMaterialPrice),
+             'drawer'=>$drawarCalc,
+             'totalPrice'=>(round($cabinateInSquarInch*$cabinetInteriorMaterialPrice)+(round($singleShelveSquar*$cabinetInteriorMaterialPrice)*($extractedItems['Shelves']??0))+($drawarCalc['singleDrawerPrice']*$drawarCalc['totalDrawer'])+round($cabinateInSquarInch*$this->manufaturingCost,2)) * $quantity
+ 
+         ]);
+
+    }
+
+    
 }
