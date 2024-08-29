@@ -105,12 +105,12 @@ class CalculationController extends Controller
             *"cm_height_fraction": "0.9",
             *"cm_dept_fraction": "0.9"
              */
-            $dimensionWidthFrac =  $this->numberCheck($request->input('cm_width_fraction',0));
-            $dimensionWidth = $this->numberCheck($request->input('cm_width',35));
-            $dimensionHeightFrac =  $this->numberCheck($request->input('cm_height_fraction',0));
-            $dimensionHeight = $this->numberCheck($request->input('cm_height',35));
-            $dimensionDeptFrac =  $this->numberCheck($request->input('cm_dept_fraction',0));
-            $dimensionDept =  $this->numberCheck($request->input('cm_dept',35));
+            $dimensionWidthFrac =  $this->numberCheck($request->input('cm_width_fraction',0.6));
+            $dimensionWidth = $this->numberCheck($request->input('cm_width',41));
+            $dimensionHeightFrac =  $this->numberCheck($request->input('cm_height_fraction',0.6));
+            $dimensionHeight = $this->numberCheck($request->input('cm_height',88));
+            $dimensionDeptFrac =  $this->numberCheck($request->input('cm_dept_fraction',0.6));
+            $dimensionDept =  $this->numberCheck($request->input('cm_dept',60));
 
             $dimensionWidthInInches = ($dimensionWidth+$dimensionWidthFrac) * 0.393701;
             $dimensionHeightInInches = ($dimensionHeight+$dimensionHeightFrac) * 0.393701;
@@ -125,11 +125,11 @@ class CalculationController extends Controller
             *"inch_height_fraction": "1/2",
             *"inch_dept_fraction": "3/8"
              */
-            $dimensionWidth = $this->numberCheck($request->input('inch_width',35));
+            $dimensionWidth = $this->numberCheck($request->input('inch_width',16));
             $dimensionWidthFrac =  $this->numberCheck($request->input('inch_width_fraction',0),true);
-            $dimensionHeight = $this->numberCheck($request->input('inch_height',35));
+            $dimensionHeight = $this->numberCheck($request->input('inch_height',34));
             $dimensionHeightFrac =  $this->numberCheck($request->input('inch_height_fraction',0),true);
-            $dimensionDept =  $this->numberCheck($request->input('inch_dept',35));
+            $dimensionDept =  $this->numberCheck($request->input('inch_dept',23));
             $dimensionDeptFrac =  $this->numberCheck($request->input('inch_dept_fraction',0),true);
 
             $dimensionWidthInInches = ($dimensionWidth+$dimensionWidthFrac);
