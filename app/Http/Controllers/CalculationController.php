@@ -34,8 +34,9 @@ class CalculationController extends Controller
         }else{
             $fixed_shelves_price = $cabinetInteriorMaterialPrice;
         }
-        $fixed_shelves_single=$fixed_shelves_price*$cabinateSize['h'] * $cabinateSize['w'];
+        $fixed_shelves_single=$fixed_shelves_price*$cabinateSize['d'] * $cabinateSize['w'];
         $fixed_shelves_calc = [
+            'fixed_shelve_single_square_inch'=> $cabinateSize['d'] * $cabinateSize['w'],
             'fixed_shelve_single_price'=> round($fixed_shelves_single,2),
             'fixed_shelve_qty'=> $number_of_fixed_shelves,
             'fixed_shelve_total_price'=> round($fixed_shelves_single* $number_of_fixed_shelves,2)
@@ -52,8 +53,9 @@ class CalculationController extends Controller
         }else{
             $pullout_shelves_price = $cabinetInteriorMaterialPrice;
         }
-        $pullout_shelves_single=$pullout_shelves_price*$cabinateSize['h'] * $cabinateSize['w'];
+        $pullout_shelves_single=$pullout_shelves_price*$cabinateSize['d'] * $cabinateSize['w'];
         $pullout_shelve_calc = [
+            'pullout_shelve_single_square_inch'=> $cabinateSize['d'] * $cabinateSize['w'],
             'pullout_shelve_single_price'=> round($pullout_shelves_single,2),
             'pullout_shelve_qty'=> $number_of_pullout_shelves,
             'pullout_shelve_total_price'=> round($pullout_shelves_single*$number_of_pullout_shelves,2)
@@ -78,6 +80,8 @@ class CalculationController extends Controller
         (round($pullout_shelve_calc['pullout_shelve_total_price']))+(round($fixed_shelves_calc['fixed_shelve_total_price']))+($doorCalc['singleDoorPrice']*$doorCalc['totalDoor'])+($drawarCalc['singleDrawerPrice']*$drawarCalc['totalDrawer'])+round($cabinateInSquarInch*$this->manufaturingCost,2);
         
         return response()->json([
+            'cabinet_interior_material_price'=>$cabinetInteriorMaterialPrice,
+            'door_material_price'=>$doorPrice,
             'cabinet_attach_item' =>$extractedItems,
             'cmToInche'=>$cabinateSize,
             'cabinateInSquareInch'=>round($cabinateInSquarInch,2),
