@@ -8,9 +8,12 @@ class CalculationController extends Controller
 { 
 
    public $manufaturingCost;
-
+   public $pullout_shelves_height;
+   public $pullout_shelves_manufracring_cost;
     public function __construct() {
         $this->manufaturingCost =  0.01;
+        $this->pullout_shelves_height = 5;
+        $this->pullout_shelves_manufracring_cost = 79.49;
     }
 
     public function index(Request $request)
@@ -53,12 +56,14 @@ class CalculationController extends Controller
         }else{
             $pullout_shelves_price = $cabinetInteriorMaterialPrice;
         }
-        $pullout_shelves_single=$pullout_shelves_price*$cabinateSize['d'] * $cabinateSize['w'];
+        $pullout_shelves_single=$pullout_shelves_price*$this->pullout_shelves_height*$cabinateSize['w'];
+        $pullout_shelves_box = (2*$this->pullout_shelves_height*$cabinateSize['d'])+($cabinateSize['w']*$cabinateSize['d'])+(2*$cabinateSize['w']*$this->pullout_shelves_height);
         $pullout_shelve_calc = [
-            'pullout_shelve_single_square_inch'=> $cabinateSize['d'] * $cabinateSize['w'],
-            'pullout_shelve_single_price'=> round($pullout_shelves_single,2),
+            'pullout_shelve_single_square_inch'=> $this->pullout_shelves_height*$cabinateSize['w'],
+            'pullout_shelves_box_square_inch'=>$pullout_shelves_box,
+            'pullout_shelve_single_price'=> round(round($pullout_shelves_single,2)+round($pullout_shelves_box*$pullout_shelves_price,2)+$this->pullout_shelves_manufracring_cost,2),
             'pullout_shelve_qty'=> $number_of_pullout_shelves,
-            'pullout_shelve_total_price'=> round($pullout_shelves_single*$number_of_pullout_shelves,2)
+            'pullout_shelve_total_price'=> round($number_of_pullout_shelves*(round($pullout_shelves_single,2)+round($pullout_shelves_box*$pullout_shelves_price,2)+$this->pullout_shelves_manufracring_cost),2)
         ];
         //fished side
         $finished_side_data = $request->input('finished_side_data.data_product_name');
@@ -70,9 +75,13 @@ class CalculationController extends Controller
         }else{
             $finishes_side_price = $cabinetInteriorMaterialPrice;
         }
+        $squar_finished_side = $cabinateSize['h']*$cabinateSize['d'];
+        $finished_side_manufaturing_cost = round($squar_finished_side * $this->manufaturingCost,2) * $sideCount;
         $finished_side =[
-            'price'=>round($sideCount*$finishes_side_price*($cabinateSize['h']) * ($cabinateSize['w']),2),
+            'squar_inch'=>$squar_finished_side,
+            'price'=>round($sideCount*$finishes_side_price*$squar_finished_side,2)+$finished_side_manufaturing_cost,
             'qty'=> $sideCount,
+            'manufractur_cost'=> $finished_side_manufaturing_cost
         ];
         // dd($shelveCalc);
         $cabinateInSquarInch = (2*($cabinateSize['h']*$cabinateSize['d']))+($cabinateSize['h']*$cabinateSize['w'])+ (2*($cabinateSize['w']*$cabinateSize['d']));
