@@ -26,6 +26,7 @@ class CalculationController extends Controller
         //door calculation
         $cabinetInteriorMaterialPrice = $request->input('cabinet_interior_material_data.value');
         $doorPrice = $request->input('cabinate_door_style_data.value');
+        
         $drawarCalc=$this->drawerCalc($cabinateSize,$doorPrice,$extractedItems['Drawer']??0);
         $doorCalc= $this->doorCalc($drawarCalc['totalDrawerHeight'],$cabinateSize,$doorPrice,$extractedItems['Door']??0);
         $number_of_fixed_shelves = $request->input('number_of_fixed_shelves')??0; 
@@ -68,7 +69,8 @@ class CalculationController extends Controller
         //fished side
         $finished_side_data = $request->input('finished_side_data.data_product_name');
         $finishes_side_type = $request->input('finishes_side_type');
-        $sideCount = $this->containsWord($finished_side_data,'Both')?2:1;
+        $sideCount = empty($finished_side_data)?0:($this->containsWord($finished_side_data, 'Both') ? 2 : 1);
+
         $finishes_side_price = 0 ;
         if($this->containsWord($finishes_side_type,'Door')){
             $finishes_side_price = $doorPrice;
@@ -76,12 +78,13 @@ class CalculationController extends Controller
             $finishes_side_price = $cabinetInteriorMaterialPrice;
         }
         $squar_finished_side = $cabinateSize['h']*$cabinateSize['d'];
-        $finished_side_manufaturing_cost = round($squar_finished_side * $this->manufaturingCost,2) * $sideCount;
+        $finished_side_manufaturing_cost = round($cabinateSize['h']*$cabinateSize['w']*$this->manufaturingCost,2)*$sideCount;
         $finished_side =[
-            'squar_inch'=>$squar_finished_side,
-            'price'=>round($sideCount*$finishes_side_price*$squar_finished_side,2)+$finished_side_manufaturing_cost,
+            'single_squar_inch'=>$squar_finished_side,
             'qty'=> $sideCount,
-            'manufractur_cost'=> $finished_side_manufaturing_cost
+            'single_price'=>round($finishes_side_price*$squar_finished_side),
+            'manufractur_cost'=> $finished_side_manufaturing_cost,
+            'price'=>round($sideCount*$finishes_side_price*$squar_finished_side,2)+$finished_side_manufaturing_cost,
         ];
         // dd($shelveCalc);
         $cabinateInSquarInch = (2*($cabinateSize['h']*$cabinateSize['d']))+($cabinateSize['h']*$cabinateSize['w'])+ (2*($cabinateSize['w']*$cabinateSize['d']));
