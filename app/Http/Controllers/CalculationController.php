@@ -34,7 +34,7 @@ class CalculationController extends Controller
         $door_product_parent = $request->input('door_drawer_front_color_data.data_product_parent');
         $drawar_qty = $extractedItems['Drawer']??0; 
         $door_qty = $extractedItems['Door']??0;
-        $drawarCalc=$this->drawerCalc($cabinateSize,$doorPrice);
+        $drawarCalc=$this->drawerCalc($cabinateSize,$doorPrice,$door_qty,$drawar_qty);
 
         $drawarCalcTwo=[
             'singleDrawerSquarInch'=>0,
@@ -42,7 +42,7 @@ class CalculationController extends Controller
             'drawar_manufacturing_fixed_cost'=> 0
         ];
         if($drawar_qty==2){
-            $drawarCalcTwo=$this->drawerCalc($cabinateSize,$doorPrice);
+            $drawarCalcTwo=$this->drawerCalc($cabinateSize,$doorPrice,$door_qty,$drawar_qty);
         }
 
         $drawarCalcThree=[
@@ -51,7 +51,7 @@ class CalculationController extends Controller
             'drawar_manufacturing_fixed_cost'=> 0
         ];
         if($drawar_qty==3){
-            $drawarCalcThree=$this->drawerCalc($cabinateSize,$doorPrice);
+            $drawarCalcThree=$this->drawerCalc($cabinateSize,$doorPrice,$door_qty,$drawar_qty);
         }
 
         $drawarCalcFour=[
@@ -60,7 +60,7 @@ class CalculationController extends Controller
             'drawar_manufacturing_fixed_cost'=> 0
         ];
         if($drawar_qty==4){
-            $drawarCalcFour=$this->drawerCalc($cabinateSize,$doorPrice);
+            $drawarCalcFour=$this->drawerCalc($cabinateSize,$doorPrice,$door_qty,$drawar_qty);
         }
 
 
@@ -268,8 +268,12 @@ class CalculationController extends Controller
                         'singleDoorPrice'=>round(round((($size['w']/$count)*($size['h']-$drawar_height))*$price,2)+$this->door_manufacturing_fixed_cost,2),
                     ];
     }
-    private function drawerCalc($size,$price):array{
-            $singleDrawarHeight = 6;
+    private function drawerCalc($size,$price,$door_qty,$drawar_qty):array{
+        if($door_qty==0){
+            $singleDrawarHeight=6;
+        }else{
+            $singleDrawarHeight=$size['h']/$drawar_qty;
+        }
             $box_area = (2*$singleDrawarHeight*$size['d'])+($size['d']*$size['w'])+(2*$singleDrawarHeight*$size['w']);
               return [
                         'price'=>$price,
@@ -310,30 +314,30 @@ class CalculationController extends Controller
 
 
   public function vanities(Request $request){
-         // Extracting data from the request
-         $cabinetBoxConstruction = $request->input('data_product_specification.value');
-         $cabinetAttachItem = $request->input('cabinate_type_data.data_product_specification');
-         $cabinetDoorStyle = $request->input('cabinate_door_style_data.value');
-         $cabinetInteriorMaterialPrice = $request->input('cabinet_interior_material_data.value');   
-         $cabinateSize=$this->cmToInches($request);
-         $extractedItems = $this->extractAttachItem($cabinetAttachItem);
-         $cabinateInSquarInch = (2*($cabinateSize['h']*$cabinateSize['d']))+($cabinateSize['h']*$cabinateSize['w'])+ (2*($cabinateSize['w']*$cabinateSize['d']));
-         $quantity = $request->quantity;
+        //  // Extracting data from the request
+        //  $cabinetBoxConstruction = $request->input('data_product_specification.value');
+        //  $cabinetAttachItem = $request->input('cabinate_type_data.data_product_specification');
+        //  $cabinetDoorStyle = $request->input('cabinate_door_style_data.value');
+        //  $cabinetInteriorMaterialPrice = $request->input('cabinet_interior_material_data.value');   
+        //  $cabinateSize=$this->cmToInches($request);
+        //  $extractedItems = $this->extractAttachItem($cabinetAttachItem);
+        //  $cabinateInSquarInch = (2*($cabinateSize['h']*$cabinateSize['d']))+($cabinateSize['h']*$cabinateSize['w'])+ (2*($cabinateSize['w']*$cabinateSize['d']));
+        //  $quantity = $request->quantity;
  
-         $singleShelveSquar= round($cabinateSize['w']*$cabinateSize['d']);
-         $drawarCalc=$this->drawerCalc($cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Drawer']??0);
-         return response()->json([
-             'cabinet_box_construction' => $cabinetBoxConstruction,
-             'cabinet_attach_item' =>$extractedItems,
-             'cabinet_door_style' => $cabinetDoorStyle,
-             'cmToInche'=>$cabinateSize,
-             'cabinateInSquareInch'=>$cabinateInSquarInch,
-             'manufacturingCostDoller'=>round($cabinateInSquarInch*$this->manufaturingCost,2),
-             'cabinateBoxPriceDollar'=>round($cabinateInSquarInch*$cabinetInteriorMaterialPrice),
-             'drawer'=>$drawarCalc,
-             'totalPrice'=>(round($cabinateInSquarInch*$cabinetInteriorMaterialPrice)+(round($singleShelveSquar*$cabinetInteriorMaterialPrice)*($extractedItems['Shelves']??0))+($drawarCalc['singleDrawerPrice']*$drawarCalc['totalDrawer'])+round($cabinateInSquarInch*$this->manufaturingCost,2)) * $quantity
+        //  $singleShelveSquar= round($cabinateSize['w']*$cabinateSize['d']);
+        //  $drawarCalc=$this->drawerCalc($cabinateSize,$cabinetInteriorMaterialPrice,$extractedItems['Drawer']??0);
+        //  return response()->json([
+        //      'cabinet_box_construction' => $cabinetBoxConstruction,
+        //      'cabinet_attach_item' =>$extractedItems,
+        //      'cabinet_door_style' => $cabinetDoorStyle,
+        //      'cmToInche'=>$cabinateSize,
+        //      'cabinateInSquareInch'=>$cabinateInSquarInch,
+        //      'manufacturingCostDoller'=>round($cabinateInSquarInch*$this->manufaturingCost,2),
+        //      'cabinateBoxPriceDollar'=>round($cabinateInSquarInch*$cabinetInteriorMaterialPrice),
+        //      'drawer'=>$drawarCalc,
+        //      'totalPrice'=>(round($cabinateInSquarInch*$cabinetInteriorMaterialPrice)+(round($singleShelveSquar*$cabinetInteriorMaterialPrice)*($extractedItems['Shelves']??0))+($drawarCalc['singleDrawerPrice']*$drawarCalc['totalDrawer'])+round($cabinateInSquarInch*$this->manufaturingCost,2)) * $quantity
  
-         ]);
+        //  ]);
 
     }
 
