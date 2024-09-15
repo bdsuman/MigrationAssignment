@@ -167,7 +167,7 @@ class CalculationController extends Controller
             'cmToInche'=>$cabinateSize,
             'cabinateInSquareInch'=>round($cabinateInSquarInch,2),
             'manufacturingCostDoller'=>round($cabinateInSquarInch*$this->manufaturingCost,2),
-            'cabinateBoxPriceDollar'=>round($cabinateInSquarInch*$cabinetInteriorMaterialPrice),
+            'cabinateBoxPriceDollar'=>round($cabinateInSquarInch*$cabinetInteriorMaterialPrice,2),
             'fixed_shelves_calc'=>$fixed_shelves_calc,     
             'pullout_shelve_calc'=>$pullout_shelve_calc, 
             'finished_side'=>$finished_side,    
@@ -269,12 +269,16 @@ class CalculationController extends Controller
                     ];
     }
     private function drawerCalc($size,$price,$door_qty,$drawar_qty):array{
-        if($door_qty==0){
+        if($door_qty>0){
             $singleDrawarHeight=6;
+            $boxSingleDrawarHeight=6;
         }else{
+            $box_drawar_qty=$drawar_qty==1?2:$drawar_qty;
             $singleDrawarHeight=$size['h']/$drawar_qty;
+            $boxSingleDrawarHeight = $size['h']/$box_drawar_qty;
         }
-            $box_area = (2*$singleDrawarHeight*$size['d'])+($size['d']*$size['w'])+(2*$singleDrawarHeight*$size['w']);
+
+            $box_area = (2*$boxSingleDrawarHeight*$size['d'])+($size['d']*$size['w'])+(2*$boxSingleDrawarHeight*$size['w']);
               return [
                         'price'=>$price,
                         'singleDrawerSquarInch'=>$size['w']*$singleDrawarHeight,
