@@ -12,18 +12,22 @@ class CalculationController extends Controller
    public $pullout_shelves_manufracring_cost;
    public $door_manufacturing_fixed_cost;
    public $drawar_manufacturing_fixed_cost;
+   public $blind_manufacturing_fixed_cost;
     public function __construct() {
         $this->manufaturingCost =  0.01;
         $this->pullout_shelves_height = 5;
         $this->pullout_shelves_manufracring_cost = 79.49;
         $this->door_manufacturing_fixed_cost = 17.80;
         $this->drawar_manufacturing_fixed_cost = 79.49;
+        $this->blind_manufacturing_fixed_cost = 15;
     }
 
     public function index(Request $request)
     {
         // Extracting data from the request
         $cabinetAttachItem = $request->input('cabinate_type_data.data_product_specification');
+        $is_blind = $this->containsWord($request->input('cabinate_type_data.data_product_name'),'Blind');
+        $is_upper = $this->containsWord($request->input('cabinate_type_data.data_product_name'),'Upper');
         $extractedItems = $this->extractAttachItem($cabinetAttachItem);
         $cabinateSize=$this->cmToInches($request);
         $quantity = $request->input('quantity',1);
@@ -41,6 +45,10 @@ class CalculationController extends Controller
             'singleDrawerPrice'=>0,
             'drawar_manufacturing_fixed_cost'=> 0
         ];
+        $drawer_height = 6*$drawar_qty;
+        if($drawar_qty == 2 && $door_qty== 2){
+            $drawer_height = 6;
+        }
         if($drawar_qty==2){
             $drawarCalcTwo=$this->drawerCalc($cabinateSize,$doorPrice,$door_qty,$drawar_qty);
         }
@@ -63,8 +71,16 @@ class CalculationController extends Controller
             $drawarCalcFour=$this->drawerCalc($cabinateSize,$doorPrice,$door_qty,$drawar_qty);
         }
 
+        $w1=0;
+        if($is_blind){
+            $w1=26.5;
+        }
+        
+        if($is_blind && $is_upper){
+            $w1=14.5;
+        }
 
-        $doorCalc= $this->doorCalc(6*$drawar_qty,$cabinateSize,$doorPrice,$door_qty);
+        $doorCalc= $this->doorCalc($drawer_height,$cabinateSize,$doorPrice,$door_qty,$w1);
         $doorTwoCalc=[
             'price_of_unit'=>0,
             'singleDoorSquarInch'=>0,
@@ -72,7 +88,7 @@ class CalculationController extends Controller
             'singleDoorPrice'=>0,
         ];
         if($door_qty==2){
-            $doorTwoCalc= $this->doorCalc(6*$drawar_qty,$cabinateSize,$doorPrice,$door_qty);
+            $doorTwoCalc= $this->doorCalc($drawer_height,$cabinateSize,$doorPrice,$door_qty,$w1);
         }
         $number_of_fixed_shelves = $request->input('number_of_fixed_shelves')??0; 
         $number_of_fixed_shelves_type = $request->input('number_of_fixed_shelves_type'); 
@@ -149,7 +165,24 @@ class CalculationController extends Controller
                     ];
         }
 
+        //blind fixed panel cost
+        $blind_fixed_cost = [
+                    'material_cost'=>0,
+                    'squar_inche'=>0,
+                    'manufacturing_cost'=>0,
+                    'price'=>0,
+            ];
+
+        if($is_blind){
+            $blind_fixed_cost = [
+                    'material_cost'=>$cabinetInteriorMaterialPrice,
+                    'squar_inche'=>$cabinateSize['h']*26.5,
+                    'manufacturing_cost'=>$this->blind_manufacturing_fixed_cost,
+                    'price'=> round(($cabinateSize['h']*26.5*$cabinetInteriorMaterialPrice)+$this->blind_manufacturing_fixed_cost,2),
+            ];
+        }
         $allPrice = round(
+                    $blind_fixed_cost['price']+
                     round($mdf_door['total_price'])+
                     round($cabinateInSquarInch*$cabinetInteriorMaterialPrice)+
                     (round($finished_side['price']))+
@@ -174,6 +207,7 @@ class CalculationController extends Controller
             'DoorCost'=>['one'=>$doorCalc,'two'=>$doorTwoCalc,'quantity'=>$door_qty],
             'drawer'=>['one'=>$drawarCalc,'two'=>$drawarCalcTwo,'three'=>$drawarCalcThree,'four'=>$drawarCalcFour,'quantity'=>$drawar_qty],
             'MDFDoorCost'=>$mdf_door,
+            'blind_fixed_cost'=>$blind_fixed_cost,
             'totalPrice'=>$allPrice*$quantity
         ]);
     }
@@ -251,7 +285,7 @@ class CalculationController extends Controller
         return $extracted;
     }
 
-    private function doorCalc($drawar_height,$size,$price,$count):array{
+    private function doorCalc($drawar_height,$size,$price,$count,$w1):array{
 
             if($count==0){
                 return [    
@@ -261,14 +295,21 @@ class CalculationController extends Controller
                     'singleDoorPrice'=>0,
                 ];
             }
+            $width = $size['w'];
+            if($w1>0){
+                $width = $w1-26.5;
+                // $width = $w1;
+            }
             return [    
                         'price_of_unit'=>$price,
-                        'singleDoorSquarInch'=>($size['w']/$count)*($size['h']-$drawar_height),
+                        'singleDoorSquarInch'=>($width/$count)*($size['h']-$drawar_height),
                         'door_manufacturing_fixed_cost'=>$this->door_manufacturing_fixed_cost,
-                        'singleDoorPrice'=>round(round((($size['w']/$count)*($size['h']-$drawar_height))*$price,2)+$this->door_manufacturing_fixed_cost,2),
+                        'singleDoorPrice'=>round(round((($width/$count)*($size['h']-$drawar_height))*$price,2)+$this->door_manufacturing_fixed_cost,2),
                     ];
     }
     private function drawerCalc($size,$price,$door_qty,$drawar_qty):array{
+        $singleDrawarWidth=$size['w'];
+        $boxSingleDrawarWidth=$size['w'];
         if($door_qty>0){
             $singleDrawarHeight=6;
             $boxSingleDrawarHeight=6;
@@ -278,11 +319,16 @@ class CalculationController extends Controller
             $boxSingleDrawarHeight = $size['h']/$box_drawar_qty;
         }
 
-            $box_area = (2*$boxSingleDrawarHeight*$size['d'])+($size['d']*$size['w'])+(2*$boxSingleDrawarHeight*$size['w']);
+        if($door_qty==2 && $drawar_qty==2){
+            $singleDrawarWidth=$size['w']/2;
+            $boxSingleDrawarWidth=$size['w']/2;
+        }
+
+            $box_area = (2*$boxSingleDrawarHeight*$size['d'])+($size['d']*$boxSingleDrawarWidth)+(2*$boxSingleDrawarHeight*$boxSingleDrawarWidth);
               return [
                         'price'=>$price,
-                        'singleDrawerSquarInch'=>$size['w']*$singleDrawarHeight,
-                        'singleDrawerPrice'=>round($size['w']*$singleDrawarHeight*$price+$this->drawar_manufacturing_fixed_cost+($box_area*$price),2),
+                        'singleDrawerSquarInch'=>$singleDrawarWidth*$singleDrawarHeight,
+                        'singleDrawerPrice'=>round($singleDrawarWidth*$singleDrawarHeight*$price+$this->drawar_manufacturing_fixed_cost+($box_area*$price),2),
                         'drawar_manufacturing_fixed_cost'=> $this->drawar_manufacturing_fixed_cost,
                         'box_cost'=>[
                             'area'=>$box_area,
