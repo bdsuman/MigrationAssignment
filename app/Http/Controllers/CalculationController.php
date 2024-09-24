@@ -28,6 +28,7 @@ class CalculationController extends Controller
         $cabinetAttachItem = $request->input('cabinate_type_data.data_product_specification');
         $is_blind = $this->containsWord($request->input('cabinate_type_data.data_product_name'),'Blind');
         $is_upper = $this->containsWord($request->input('cabinate_type_data.data_product_name'),'Upper');
+        $is_base_45_corner = $this->containsWord($request->input('cabinate_type_data.data_product_parent'),'BASE_45_CORNER');
         $extractedItems = $this->extractAttachItem($cabinetAttachItem);
         $cabinateSize=$this->cmToInches($request);
         $quantity = $request->input('quantity',1);
@@ -148,7 +149,16 @@ class CalculationController extends Controller
             'price'=>round($sideCount*$finishes_side_price*$squar_finished_side,2)+$finished_side_manufaturing_cost,
         ];
         // dd($shelveCalc);
-        $cabinateInSquarInch = (2*($cabinateSize['h']*$cabinateSize['d']))+($cabinateSize['h']*$cabinateSize['w'])+ (2*($cabinateSize['w']*$cabinateSize['d']));
+        if($is_base_45_corner){
+            $base_w=$cabinateSize['w'];
+            $base_h = $cabinateSize['h'];
+            $base_d = $cabinateSize['d'];
+            $base_w2=$base_w-$base_d;
+            $base_w4= sqrt(2*pow($base_w2,2));
+            $cabinateInSquarInch =2*($base_h*$base_d)+2*($base_h*$base_w)+2*($base_w*$base_d)+2*($base_w2*$base_d);
+        }else{
+            $cabinateInSquarInch = (2*($cabinateSize['h']*$cabinateSize['d']))+($cabinateSize['h']*$cabinateSize['w'])+ (2*($cabinateSize['w']*$cabinateSize['d']));
+        }
        
         //only mdf door calculation 
         $mdf_door =  [
