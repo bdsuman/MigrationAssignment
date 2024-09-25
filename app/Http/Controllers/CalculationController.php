@@ -39,6 +39,10 @@ class CalculationController extends Controller
         $door_product_parent = $request->input('door_drawer_front_color_data.data_product_parent');
         $drawar_qty = $extractedItems['Drawer']??0; 
         $door_qty = $extractedItems['Door']??0;
+
+
+       
+
         $drawarCalc=$this->drawerCalc($cabinateSize,$doorPrice,$door_qty,$drawar_qty);
 
         $drawarCalcTwo=[
@@ -80,8 +84,21 @@ class CalculationController extends Controller
         if($is_blind && $is_upper){
             $w1=14.5;
         }
+        //only mdf door calculation 
+        $mdf_door =  [
+            'squar_inche'=>0,
+            'price'=>0,
+            'total_price'=>0
+        ];
 
-        $doorCalc= $this->doorCalc($drawer_height,$cabinateSize,$doorPrice,$door_qty,$w1);
+        if($this->containsWord($door_product_parent,'MDF')){
+            $mdf_door = [
+                        'squar_inche'=>($cabinateSize['h']-(6*$drawar_qty))*$cabinateSize['w'],
+                        'price'=>$doorMDFPrice+$this->door_manufacturing_fixed_cost,
+                        'total_price'=>round((($cabinateSize['h']-(6*$drawar_qty))*$cabinateSize['w']*$doorMDFPrice)+$this->door_manufacturing_fixed_cost,2)
+                    ];
+        }
+        $doorCalc= $this->doorCalc($drawer_height,$cabinateSize,$doorPrice,$door_qty,$w1,$mdf_door);
         $doorTwoCalc=[
             'price_of_unit'=>0,
             'singleDoorSquarInch'=>0,
@@ -89,7 +106,7 @@ class CalculationController extends Controller
             'singleDoorPrice'=>0,
         ];
         if($door_qty==2){
-            $doorTwoCalc= $this->doorCalc($drawer_height,$cabinateSize,$doorPrice,$door_qty,$w1);
+            $doorTwoCalc= $this->doorCalc($drawer_height,$cabinateSize,$doorPrice,$door_qty,$w1,$mdf_door);
         }
         $number_of_fixed_shelves = $request->input('number_of_fixed_shelves')??0; 
         $number_of_fixed_shelves_type = $request->input('number_of_fixed_shelves_type'); 
@@ -100,9 +117,14 @@ class CalculationController extends Controller
         }else{
             $fixed_shelves_price = $cabinetInteriorMaterialPrice;
         }
-        $fixed_shelves_single=$fixed_shelves_price*$cabinateSize['d'] * $cabinateSize['w'];
+        if($is_base_45_corner){
+            $fixed_shelves_area= $cabinateSize['w'] * $cabinateSize['w'];
+        }else{
+            $fixed_shelves_area= $cabinateSize['d'] * $cabinateSize['w']; 
+        }
+        $fixed_shelves_single=$fixed_shelves_price* $fixed_shelves_area;
         $fixed_shelves_calc = [
-            'fixed_shelve_single_square_inch'=> $cabinateSize['d'] * $cabinateSize['w'],
+            'fixed_shelve_single_square_inch'=>  $fixed_shelves_area,
             'fixed_shelve_single_price'=> round($fixed_shelves_single,2),
             'fixed_shelve_qty'=> $number_of_fixed_shelves,
             'fixed_shelve_total_price'=> round($fixed_shelves_single* $number_of_fixed_shelves,2)
@@ -148,6 +170,7 @@ class CalculationController extends Controller
             'manufractur_cost'=> $finished_side_manufaturing_cost,
             'price'=>round($sideCount*$finishes_side_price*$squar_finished_side,2)+$finished_side_manufaturing_cost,
         ];
+        
         // dd($shelveCalc);
         if($is_base_45_corner){
             $base_w=$cabinateSize['w'];
@@ -155,25 +178,35 @@ class CalculationController extends Controller
             $base_d = $cabinateSize['d'];
             $base_w2=$base_w-$base_d;
             $base_w4= sqrt(2*pow($base_w2,2));
-            $cabinateInSquarInch =2*($base_h*$base_d)+2*($base_h*$base_w)+2*($base_w*$base_d)+2*($base_w2*$base_d);
+            $cabinateInSquarInch =2*($base_h*$base_d)+2*($base_h*$base_w)+2*($base_w*$base_w);
+            $cabinatePrice= $cabinateInSquarInch * $cabinetInteriorMaterialPrice;
+            $base_door_area= $base_w4*$base_h;
+            if($mdf_door['total_price']>0){
+                $base_door_price= 0;
+            }else{
+                $base_door_price= $base_w4*$base_h*$doorPrice+$this->door_manufacturing_fixed_cost;
+            }
+            return response()->json([
+                'cabinet_interior_material_price'=>$cabinetInteriorMaterialPrice,
+                'door_material_price'=>$doorPrice,
+                'cabinet_attach_item' =>$extractedItems,
+                'cmToInche'=>$cabinateSize,
+                'cabinateInSquareInch'=>round($cabinateInSquarInch,2),
+                'manufacturingCostDoller'=>round($cabinateInSquarInch*$this->manufaturingCost,2),
+                'cabinateBoxPriceDollar'=>round($cabinateInSquarInch*$cabinetInteriorMaterialPrice,2),
+                'fixed_shelves_calc'=>$fixed_shelves_calc,     
+                'finished_side'=>$finished_side,  
+                'door_area'=>round($base_door_area),
+                'mdf_door'=>$mdf_door,
+                'door_price'=> round($base_door_price,2),
+                'door_manufacturing_fixed_cost'=>$this->door_manufacturing_fixed_cost,
+                'totalPrice'=> round($fixed_shelves_calc['fixed_shelve_total_price']+$mdf_door['total_price']+$cabinatePrice+$base_door_price+round($cabinateInSquarInch*$this->manufaturingCost,2),2)
+            ]);
         }else{
             $cabinateInSquarInch = (2*($cabinateSize['h']*$cabinateSize['d']))+($cabinateSize['h']*$cabinateSize['w'])+ (2*($cabinateSize['w']*$cabinateSize['d']));
         }
        
-        //only mdf door calculation 
-        $mdf_door =  [
-            'squar_inche'=>0,
-            'price'=>0,
-            'total_price'=>0
-        ];
-
-        if($this->containsWord($door_product_parent,'MDF')){
-            $mdf_door = [
-                        'squar_inche'=>($cabinateSize['h']-(6*$drawar_qty))*$cabinateSize['w'],
-                        'price'=>$doorMDFPrice,
-                        'total_price'=>round(($cabinateSize['h']-(6*$drawar_qty))*$cabinateSize['w']*$doorMDFPrice,2)
-                    ];
-        }
+       
 
         //blind fixed panel cost
         $blind_fixed_cost = [
@@ -295,8 +328,15 @@ class CalculationController extends Controller
         return $extracted;
     }
 
-    private function doorCalc($drawar_height,$size,$price,$count,$w1):array{
-
+    private function doorCalc($drawar_height,$size,$price,$count,$w1,$mdf_door):array{
+            if($mdf_door['total_price']>0){
+                return [    
+                    'price_of_unit'=>0,
+                    'singleDoorSquarInch'=>0,
+                    'door_manufacturing_fixed_cost'=>0,
+                    'singleDoorPrice'=>0,
+                ];
+            }
             if($count==0){
                 return [    
                     'price_of_unit'=>0,
