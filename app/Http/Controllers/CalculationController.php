@@ -29,6 +29,7 @@ class CalculationController extends Controller
         $is_blind = $this->containsWord($request->input('cabinate_type_data.data_product_name'),'Blind');
         $is_upper = $this->containsWord($request->input('cabinate_type_data.data_product_name'),'Upper');
         $is_base_45_corner = $this->containsWord($request->input('cabinate_type_data.data_product_parent'),'BASE_45_CORNER');
+        $is_base_90_corner = $this->containsWord($request->input('cabinate_type_data.data_product_parent'),'BASE_90_CORNERS');
         $extractedItems = $this->extractAttachItem($cabinetAttachItem);
         $cabinateSize=$this->cmToInches($request);
         $quantity = $request->input('quantity',1);
@@ -119,7 +120,14 @@ class CalculationController extends Controller
         }
         if($is_base_45_corner){
             $fixed_shelves_area= $cabinateSize['w'] * $cabinateSize['w'];
-        }else{
+        }else if($is_base_90_corner){
+            $base_w=$cabinateSize['w'];
+            $base_h = $cabinateSize['h'];
+            $base_d = $cabinateSize['d'];
+            $base_w2=$base_w-$base_d;
+            $fixed_shelves_area= ($base_w*$base_d)+($base_w2*$base_d);
+        }
+        else{
             $fixed_shelves_area= $cabinateSize['d'] * $cabinateSize['w']; 
         }
         $fixed_shelves_single=$fixed_shelves_price* $fixed_shelves_area;
@@ -185,6 +193,36 @@ class CalculationController extends Controller
                 $base_door_price= 0;
             }else{
                 $base_door_price= $base_w4*$base_h*$doorPrice+$this->door_manufacturing_fixed_cost;
+            }
+            return response()->json([
+                'cabinet_interior_material_price'=>$cabinetInteriorMaterialPrice,
+                'door_material_price'=>$doorPrice,
+                'cabinet_attach_item' =>$extractedItems,
+                'cmToInche'=>$cabinateSize,
+                'cabinateInSquareInch'=>round($cabinateInSquarInch,2),
+                'manufacturingCostDoller'=>round($cabinateInSquarInch*$this->manufaturingCost,2),
+                'cabinateBoxPriceDollar'=>round($cabinateInSquarInch*$cabinetInteriorMaterialPrice,2),
+                'fixed_shelves_calc'=>$fixed_shelves_calc,     
+                'finished_side'=>$finished_side,  
+                'door_area'=>round($base_door_area),
+                'mdf_door'=>$mdf_door,
+                'door_price'=> round($base_door_price,2),
+                'door_manufacturing_fixed_cost'=>$this->door_manufacturing_fixed_cost,
+                'totalPrice'=> round($fixed_shelves_calc['fixed_shelve_total_price']+$mdf_door['total_price']+$cabinatePrice+$base_door_price+round($cabinateInSquarInch*$this->manufaturingCost,2),2)
+            ]);
+        }else if($is_base_90_corner){
+            $base_w=$cabinateSize['w'];
+            $base_h = $cabinateSize['h'];
+            $base_d = $cabinateSize['d'];
+            $base_w2=$base_w-$base_d;
+            $base_w4= sqrt(2*pow($base_w2,2));
+            $cabinateInSquarInch =2*($base_h*$base_d)+2*($base_h*$base_w)+2*(($base_w*$base_d)+($base_w2*$base_d));
+            $cabinatePrice= $cabinateInSquarInch * $cabinetInteriorMaterialPrice;
+            $base_door_area= 2*($base_w2*$base_h);
+            if($mdf_door['total_price']>0){
+                $base_door_price= 0;
+            }else{
+                $base_door_price= ($base_door_area*$doorPrice)+(2*$this->door_manufacturing_fixed_cost);
             }
             return response()->json([
                 'cabinet_interior_material_price'=>$cabinetInteriorMaterialPrice,
